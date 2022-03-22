@@ -57,9 +57,22 @@ module Hangman
     end
   end
 
+  module LetterValidation
+    include InputValidation
+
+    def unused_letter_input
+      letter = letter_input
+      while (@correct_guessed + @incorrect_guessed).include?(letter)
+        puts "You have already guessed #{letter.upcase}. Please guess a different letter."
+        letter = letter_input
+      end
+      letter
+    end
+  end
+
   class Game
     include Hangman::Visual
-    include InputValidation
+    include Hangman::LetterValidation
 
     attr_reader :game_over
 
@@ -76,6 +89,7 @@ module Hangman
     def play
       display_game_status
       guess_letter
+      check_game_over
     end
 
     def display_game_status
@@ -94,7 +108,7 @@ module Hangman
 
     def guess_letter
       puts 'Please guess a letter.'
-      letter = letter_input
+      letter = unused_letter_input
       if @word.include?(letter.downcase)
         @correct_guessed << letter.downcase
         puts "Yes, the word has #{letter.upcase}."
@@ -102,6 +116,17 @@ module Hangman
         @incorrect_guessed << letter.downcase
         puts "No, the word doesn't have #{letter.upcase}."
       end
+    end
+
+    def check_game_over
+      won = @word.chars.all? { |letter| @correct_guessed.include?(letter) }
+      lost = @incorrect_guessed.size == 6
+      return unless won || lost
+
+      display_game_status
+      puts won ? 'Congratulations, you won!' : 'Sorry, you ran out of guesses.'
+      puts "The word was \"#{@word}\"."
+      @game_over = true
     end
   end
 end
