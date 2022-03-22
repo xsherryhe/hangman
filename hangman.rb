@@ -34,15 +34,19 @@ module Hangman
       end
     end
 
+    def constructed_hangman(complete_rows, &complete_row_map)
+      complete_row_map ||= ->(row, _i) { row }
+      complete_hangman.first(complete_rows).map.with_index(&complete_row_map) + empty_hangman.last(8 - complete_rows)
+    end
+
     def hangman_states
-      [empty_hangman,
-       complete_hangman.first(3) + empty_hangman.last(5),
-       complete_hangman.first(6).map { |row| row.tr("\/\\", '  ') } + empty_hangman.last(2),
-       complete_hangman.first(6).map { |row| row.tr("\\", ' ') } + empty_hangman.last(2),
-       complete_hangman.first(6) + empty_hangman.last(2),
-       complete_hangman.map.with_index { |row, i| i == 6 ? row.tr("\\", ' ') : row },
-       complete_hangman]
-        #use method with lambda/function call for these??
+      [constructed_hangman(0),
+       constructed_hangman(3),
+       constructed_hangman(6) { |row| row.tr("\/\\", '  ') },
+       constructed_hangman(6) { |row| row.tr("\\", ' ') },
+       constructed_hangman(6),
+       constructed_hangman(8) { |row, i| i == 6 ? row.tr("\\", ' ') : row },
+       constructed_hangman(8)]
     end
   end
 
