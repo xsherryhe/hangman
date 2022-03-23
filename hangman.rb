@@ -12,8 +12,14 @@ module Hangman
   end
 
   def self.run
-    game = self::Game.new
-    game.play until game.game_over
+    loop do
+      puts 'Start a new game? Y/N'
+      unless /^yes|y$/i =~ gets.chomp
+        puts 'Okay, bye!'
+        break
+      end
+      self::Game.new.play
+    end
   end
 
   module Visual
@@ -74,8 +80,6 @@ module Hangman
     include Hangman::Visual
     include Hangman::LetterValidation
 
-    attr_reader :game_over
-
     def initialize
       @word = Hangman.words.sample
       @correct_guessed = []
@@ -87,9 +91,11 @@ module Hangman
     end
 
     def play
-      display_game_status
-      guess_letter
-      check_game_over
+      until @game_over
+        display_game_status
+        guess_letter
+        check_game_over
+      end
     end
 
     def display_game_status
@@ -107,7 +113,7 @@ module Hangman
     end
 
     def guess_letter
-      puts 'Please guess a letter.'
+      puts 'Please type a letter to guess the letter.'
       letter = unused_letter_input
       if @word.include?(letter.downcase)
         @correct_guessed << letter.downcase
@@ -124,8 +130,7 @@ module Hangman
       return unless won || lost
 
       display_game_status
-      puts won ? 'Congratulations, you won!' : 'Sorry, you ran out of guesses.'
-      puts "The word was \"#{@word}\"."
+      puts "#{won ? 'Congratulations, you won!' : 'Sorry, you ran out of guesses.'} The word was \"#{@word}\"."
       @game_over = true
     end
   end
