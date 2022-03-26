@@ -1,9 +1,10 @@
+require 'yaml'
 require_relative 'input_validation'
 
 module Hangman
   @min_length = 5
   @max_length = 12
-  @words = File.readlines('google-10000-english-no-swears.txt')
+  @words = File.readlines("#{File.dirname(__FILE__)}/google-10000-english-no-swears.txt")
                .map(&:chomp)
                .select { |word| word.length.between?(@min_length, @max_length) }
 
@@ -63,7 +64,7 @@ module Hangman
     end
   end
 
-  module LetterValidation
+  module GameInputValidation
     include InputValidation
 
     def unused_letter_input
@@ -76,9 +77,52 @@ module Hangman
     end
   end
 
+  module SaveSystem
+    # TODO: Make load game methods
+    # TODO: Implement a limit for number of save files and a way to delete save files
+    def offer_game_save
+      puts 'Type "SAVE" if you wish to save your game. Press ENTER to continue.'
+      return unless /^save$/i =~ gets.chomp
+
+      save_game
+    end
+
+    def save_game
+      Dir.mkdir("#{File.dirname(__FILE__)}/saves") unless Dir.exist?("#{File.dirname(__FILE__)}/saves")
+      file_names = File.open("#{File.dirname(__FILE__)}/save_record.txt", 'a+')
+      name = save_name(file_names)
+      file_names.puts "#{name}: #{correct_letters_in_word}"
+      file_names.close
+      File.open("#{File.dirname(__FILE__)}/saves/#{name}.yaml", 'w') { |yaml_file| to_yaml(yaml_file) }
+      puts "Game \"#{name}\" successfully saved!"
+
+      offer_game_exit
+    end
+
+    def save_name(file_names)
+      name = 'defaultsave'
+      loop do
+        puts 'Please type a name for your save file (at most 15 characters, letters and numbers only, no spaces).'
+        name = alphanumeric_input(15)
+        name_reg = Regexp.new("#{name}:", true)
+        break unless name_reg =~ file_names.read
+
+        puts 'You already have a saved game with this name. Do you want to overwrite your previous save? Y/N'
+        break if /^yes|y$/i =~ gets.chomp
+      end
+      name
+    end
+
+    def offer_game_exit
+      puts 'Exit your current game? Y/N'
+      @game_over = true if /^yes|y$/i =~ gets.chomp
+    end
+  end
+
   class Game
     include Hangman::Visual
-    include Hangman::LetterValidation
+    include Hangman::GameInputValidation
+    include Hangman::SaveSystem
 
     def initialize
       @word = Hangman.words.sample
@@ -90,11 +134,21 @@ module Hangman
       gets
     end
 
+    def to_yaml(file)
+      YAML.dump({ word: @word, correct_guessed: @correct_guessed, incorrect_guessed: @incorrect_guessed }, file)
+    end
+
     def play
-      until @game_over
+      # TO DO: Make save option a bit more streamlined/natural for UI
+      # by allowing player to either guess a single letter or type the word 'SAVE'
+      loop do
         display_game_status
+        offer_game_save
+        break if @game_over
+
         guess_letter
         check_game_over
+        break if @game_over
       end
     end
 
