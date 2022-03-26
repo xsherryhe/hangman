@@ -13,15 +13,27 @@ module Hangman
   end
 
   def self.run
-    # TODO: Refactor into options start, load, or exit instead of Y/N'
     loop do
-      puts 'Start a new game? Y/N'
-      unless /^yes|y$/i =~ gets.chomp
+      option = select_program_option
+      if option.downcase == 'exit'
         puts 'Okay, bye!'
         break
       end
-      self::Game.new.play
+      self::Game.new(option.downcase == 'new').play
     end
+  end
+
+  def self.select_program_option
+    options = "\r\n#{['NEW (Start a new game)', 'LOAD (Load a game)', 'EXIT (Exit the program)'].join("\r\n")}"
+    puts 'What would you like to do? Type one of the following commands.'
+    puts options
+    option = gets.chomp
+    until /^new|load|exit$/i =~ option
+      puts 'Please type NEW, LOAD, or EXIT.'
+      puts options
+      option = gets.chomp
+    end
+    option
   end
 
   module Visual
@@ -138,20 +150,22 @@ module Hangman
 
     def display_save_files
       puts 'SAVED GAMES:'
+      puts "\r\n"
       File.readlines(save_record).each do |save|
         puts "  -#{save}"
       end
+      puts "\r\n"
     end
 
     def load_name
       loop do
-        puts 'Please type the name of game you wish to load.'
+        puts 'Please type the name of the game you wish to load.'
         name = alphanumeric_input(15)
         name_reg = Regexp.new("^#{name} (.*)$", true)
         return name if name_reg =~ File.read(save_record)
 
         puts 'There is no saved game with that name. Do you wish to start a new game? Y/N'
-        return if /^yes|y$/i =~ gets.chomp
+        return start_new_game if /^yes|y$/i =~ gets.chomp
       end
     end
   end
@@ -161,17 +175,18 @@ module Hangman
     include Hangman::GameInputValidation
     include Hangman::SaveSystem
 
-    def initialize
-      # TODO: Refactor so that start new game or load game? is asked in the original Hangman module loop,
-      # and the Game class takes initialize parameters
+    def initialize(new_game)
+      new_game ? start_new_game : load_game
+      puts 'Press ENTER to continue.'
+      gets
+    end
+
+    def start_new_game
       @word = Hangman.words.sample
       @correct_guessed = []
       @incorrect_guessed = []
       puts "Let's play Hangman! The computer has selected a word for you to guess."
       puts "You can guess a total of #{hangman_states.size - 1} incorrect letters before you lose."
-      puts 'Press ENTER to continue.'
-      gets
-      load_game
     end
 
     def to_yaml(file)
@@ -188,6 +203,7 @@ module Hangman
     def play
       # TO DO: Make save option a bit more streamlined/natural for UI
       # by allowing player to either guess a single letter or type the word 'SAVE'
+      # also allow the player to exit by typing the word 'EXIT'
       loop do
         display_game_status
         offer_game_save
