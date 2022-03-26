@@ -1,3 +1,4 @@
-cat (_ _ _ _ e _ _ _ _ _)
 dog (_ _ o _ _)
 rabbit (_ _ _ _ _)
+fish (_ _ e _ i _ e l _)
+cat (_ _ n n e _ t _ _ s)
