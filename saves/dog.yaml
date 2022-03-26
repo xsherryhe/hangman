@@ -1,9 +1,8 @@
 ---
-:word: stamps
+:word: block
 :correct_guessed:
-- a
-- t
-:incorrect_guessed:
-- e
 - o
-- n
+:incorrect_guessed:
+- a
+- e
+- i

@@ -13,6 +13,7 @@ module Hangman
   end
 
   def self.run
+    # TODO: Refactor into options start, load, or exit instead of Y/N'
     loop do
       puts 'Start a new game? Y/N'
       unless /^yes|y$/i =~ gets.chomp
@@ -78,8 +79,16 @@ module Hangman
   end
 
   module SaveSystem
-    # TODO: Make load game methods
+    include InputValidation
     # TODO: Implement a limit for number of save files and a way to delete save files
+    def save_dir
+      "#{File.dirname(__FILE__)}/saves"
+    end
+
+    def save_record
+      "#{File.dirname(__FILE__)}/save_record.txt"
+    end
+
     def offer_game_save
       puts 'Type "SAVE" if you wish to save your game. Press ENTER to continue.'
       return unless /^save$/i =~ gets.chomp
@@ -88,34 +97,62 @@ module Hangman
     end
 
     def save_game
-      Dir.mkdir("#{File.dirname(__FILE__)}/saves") unless Dir.exist?("#{File.dirname(__FILE__)}/saves")
-      file_names = File.open("#{File.dirname(__FILE__)}/save_record.txt", 'a+')
-      name = save_name(file_names)
-      file_names.puts "#{name}: #{correct_letters_in_word}"
-      file_names.close
-      File.open("#{File.dirname(__FILE__)}/saves/#{name}.yaml", 'w') { |yaml_file| to_yaml(yaml_file) }
+      Dir.mkdir(save_dir) unless Dir.exist?(save_dir)
+      name = save_name
+      File.open(save_record, 'a') do |record|
+        record.puts "#{name} (#{correct_letters_in_word})"
+      end
+      File.open(save_dir + "/#{name}.yaml", 'w') { |yaml_file| to_yaml(yaml_file) }
       puts "Game \"#{name}\" successfully saved!"
 
       offer_game_exit
     end
 
-    def save_name(file_names)
-      name = 'defaultsave'
+    def save_name
       loop do
-        puts 'Please type a name for your save file (at most 15 characters, letters and numbers only, no spaces).'
+        puts 'Please type a name for your save file (max 15 characters, letters and numbers only, no spaces).'
         name = alphanumeric_input(15)
-        name_reg = Regexp.new("#{name}:", true)
-        break unless name_reg =~ file_names.read
+        name_reg = Regexp.new("^#{name} (.*)$", true)
+        return name unless name_reg =~ File.read(save_record)
 
         puts 'You already have a saved game with this name. Do you want to overwrite your previous save? Y/N'
-        break if /^yes|y$/i =~ gets.chomp
+        return name if /^yes|y$/i =~ gets.chomp
       end
-      name
     end
 
     def offer_game_exit
       puts 'Exit your current game? Y/N'
       @game_over = true if /^yes|y$/i =~ gets.chomp
+    end
+
+    def load_game
+      return 'Sorry, you have no saved games.' unless File.exist?(save_record)
+
+      display_save_files
+      name = load_name
+      return unless name
+
+      from_yaml(save_dir + "/#{name}.yaml")
+      puts "Game \"#{name}\" successfully loaded!"
+    end
+
+    def display_save_files
+      puts 'SAVED GAMES:'
+      File.readlines(save_record).each do |save|
+        puts "  -#{save}"
+      end
+    end
+
+    def load_name
+      loop do
+        puts 'Please type the name of game you wish to load.'
+        name = alphanumeric_input(15)
+        name_reg = Regexp.new("^#{name} (.*)$", true)
+        return name if name_reg =~ File.read(save_record)
+
+        puts 'There is no saved game with that name. Do you wish to start a new game? Y/N'
+        return if /^yes|y$/i =~ gets.chomp
+      end
     end
   end
 
@@ -125,6 +162,8 @@ module Hangman
     include Hangman::SaveSystem
 
     def initialize
+      # TODO: Refactor so that start new game or load game? is asked in the original Hangman module loop,
+      # and the Game class takes initialize parameters
       @word = Hangman.words.sample
       @correct_guessed = []
       @incorrect_guessed = []
@@ -132,10 +171,18 @@ module Hangman
       puts "You can guess a total of #{hangman_states.size - 1} incorrect letters before you lose."
       puts 'Press ENTER to continue.'
       gets
+      load_game
     end
 
     def to_yaml(file)
       YAML.dump({ word: @word, correct_guessed: @correct_guessed, incorrect_guessed: @incorrect_guessed }, file)
+    end
+
+    def from_yaml(file)
+      data = YAML.load_file(file)
+      @word = data[:word]
+      @correct_guessed = data[:correct_guessed]
+      @incorrect_guessed = data[:incorrect_guessed]
     end
 
     def play
