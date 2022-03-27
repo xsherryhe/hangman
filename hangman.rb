@@ -78,15 +78,21 @@ module Hangman
   end
 
   module GameInputValidation
-    include InputValidation
+    def next_move_input
+      loop do
+        input = gets.chomp
+        return input if /^save|exit$/i =~ input ||
+                        /^[A-Za-z]$/i =~ input && !guessed(input)
 
-    def unused_letter_input
-      letter = letter_input
-      while (@correct_guessed + @incorrect_guessed).include?(letter)
-        puts "You have already guessed #{letter.upcase}. Please guess a different letter."
-        letter = letter_input
+        puts 'Please type one (1) single letter to guess the letter. (Or type SAVE or EXIT.)' if input.length > 1
+        if /^[A-Za-z]$/i =~ input && guessed(input)
+          puts "You have already guessed #{input.upcase}. Please guess a different letter."
+        end
       end
-      letter
+    end
+
+    def guessed(input)
+      (@correct_guessed + @incorrect_guessed).include?(input)
     end
   end
 
@@ -145,14 +151,11 @@ module Hangman
 
     def offer_game_exit
       puts 'Exit your current game? Y/N'
-      if /^yes|y$/i =~ gets.chomp
-        @game_over = true
-      else
-        display_game_status
-      end
+      @game_over = true if /^yes|y$/i =~ gets.chomp
     end
 
     def load_game
+      # TODO: More robust way to check if there are no save files - maybe check if save_dir exists AND if it's not empty
       return 'Sorry, you have no saved games.' unless File.exist?(save_record)
 
       display_save_files
@@ -215,15 +218,9 @@ module Hangman
     end
 
     def play
-      # TO DO: Make save option a bit more streamlined/natural for UI
-      # by allowing player to either guess a single letter or type the word 'SAVE'
-      # also allow the player to exit by typing the word 'EXIT'
       loop do
         display_game_status
-        offer_game_save
-        break if @game_over
-
-        guess_letter
+        next_move
         check_game_over
         break if @game_over
       end
@@ -243,9 +240,18 @@ module Hangman
       @word.chars.map { |letter| @correct_guessed.include?(letter) ? letter : '_' }.join(' ')
     end
 
-    def guess_letter
+    def next_move
+      puts 'Type "SAVE" to save your game or "EXIT" to exit your game.'
       puts 'Please type a letter to guess the letter.'
-      letter = unused_letter_input
+
+      move = next_move_input
+      return save_game if move.downcase == 'save'
+      return offer_game_exit if move.downcase == 'exit'
+
+      guess_letter(move)
+    end
+
+    def guess_letter(letter)
       if @word.include?(letter.downcase)
         @correct_guessed << letter.downcase
         puts "Yes, the word has #{letter.upcase}."
@@ -262,6 +268,8 @@ module Hangman
 
       display_game_status
       puts "#{won ? 'Congratulations, you won!' : 'Sorry, you ran out of guesses.'} The word was \"#{@word}\"."
+      puts 'Press ENTER to continue.'
+      gets
       @game_over = true
     end
   end
