@@ -24,9 +24,9 @@ module Hangman
   end
 
   def self.select_program_option
-    options = "\r\n#{['NEW (Start a new game)', 'LOAD (Load a game)', 'EXIT (Exit the program)'].join("\r\n")}"
-    puts 'What would you like to do? Type one of the following commands.'
-    puts options
+    options = ['NEW (Start a new game)', 'LOAD (Load a game)', 'EXIT (Exit the program)']
+    puts "\r\nMAIN MENU: What would you like to do? Type one of the following commands."
+    puts "\r\n#{options.map { |opt| "  -#{opt}" }.join("\r\n")}"
     option = gets.chomp
     until /^new|load|exit$/i =~ option
       puts 'Please type NEW, LOAD, or EXIT.'
@@ -107,13 +107,6 @@ module Hangman
       "#{File.dirname(__FILE__)}/save_record.txt"
     end
 
-    def offer_game_save
-      puts 'Type "SAVE" if you wish to save your game. Press ENTER to continue.'
-      return unless /^save$/i =~ gets.chomp
-
-      save_game
-    end
-
     def save_game
       Dir.mkdir(save_dir) unless Dir.exist?(save_dir)
 
@@ -143,24 +136,27 @@ module Hangman
     def update_save_record(name)
       new_record = File.readlines(save_record)
       new_record.reject! { |prior_save| name_record_reg(name) =~ prior_save }
-      new_record << "#{name} (#{correct_letters_in_word})"
+      new_record << "#{name.downcase} (#{correct_letters_in_word})"
       File.open(save_record, 'w') do |record|
         new_record.each { |save| record.puts(save) }
       end
     end
 
     def offer_game_exit
-      puts 'Exit your current game? Y/N'
+      puts 'Exit to main menu? Y/N'
       @game_over = true if /^yes|y$/i =~ gets.chomp
     end
 
     def load_game
-      # TODO: More robust way to check if there are no save files - maybe check if save_dir exists AND if it's not empty
-      return 'Sorry, you have no saved games.' unless File.exist?(save_record)
+      if !Dir.exist?(save_dir) || Dir.empty?(save_dir)
+        puts 'Sorry, you have no saved games. Press RETURN to exit to main menu.'
+        gets
+        return @game_over = true
+      end
 
       display_save_files
       name = load_name
-      return unless name
+      return @game_over = true unless name
 
       from_yaml(save_dir + "/#{name}.yaml")
       puts "Game \"#{name}\" successfully loaded!"
@@ -181,8 +177,8 @@ module Hangman
         name = alphanumeric_input(15)
         return name if name_record_reg(name) =~ File.read(save_record)
 
-        puts 'There is no saved game with that name. Do you wish to start a new game? Y/N'
-        return start_new_game if /^yes|y$/i =~ gets.chomp
+        puts 'There is no saved game with that name. Exit to main menu? Y/N'
+        return if /^yes|y$/i =~ gets.chomp
       end
     end
   end
@@ -194,7 +190,9 @@ module Hangman
 
     def initialize(new_game)
       new_game ? start_new_game : load_game
-      puts 'Press ENTER to continue.'
+      return if @game_over
+
+      puts 'Press the RETURN key to begin playing.'
       gets
     end
 
@@ -218,11 +216,10 @@ module Hangman
     end
 
     def play
-      loop do
+      until @game_over
         display_game_status
         next_move
         check_game_over
-        break if @game_over
       end
     end
 
@@ -241,7 +238,7 @@ module Hangman
     end
 
     def next_move
-      puts 'Type "SAVE" to save your game or "EXIT" to exit your game.'
+      puts 'Type "SAVE" to save your game or "EXIT" to exit to main menu.'
       puts 'Please type a letter to guess the letter.'
 
       move = next_move_input
@@ -268,7 +265,7 @@ module Hangman
 
       display_game_status
       puts "#{won ? 'Congratulations, you won!' : 'Sorry, you ran out of guesses.'} The word was \"#{@word}\"."
-      puts 'Press ENTER to continue.'
+      puts 'Press the RETURN key to exit to main menu.'
       gets
       @game_over = true
     end
