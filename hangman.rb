@@ -1,6 +1,7 @@
 require 'yaml'
 
 module Hangman
+  # TODO: Add extra newlines to improve presentation
   @min_length = 5
   @max_length = 12
   @words = File.readlines("#{File.dirname(__FILE__)}/google-10000-english-no-swears.txt")
@@ -27,7 +28,7 @@ module Hangman
     puts "\r\nMAIN MENU: What would you like to do? Type one of the following commands."
     puts "\r\n#{options.map { |opt| "  -#{opt}" }.join("\r\n")}"
     option = gets.chomp
-    until /^new|load|exit$/i =~ option
+    until /^new$|^load$|^exit$/i =~ option
       puts 'Please type NEW, LOAD, or EXIT.'
       puts options
       option = gets.chomp
@@ -80,7 +81,7 @@ module Hangman
     def next_move_input
       loop do
         input = gets.chomp
-        return input if /^save|exit$/i =~ input ||
+        return input if /^save$|^exit$/i =~ input ||
                         /^[A-Za-z]$/i =~ input && !guessed(input)
 
         puts 'Please type one (1) single letter to guess the letter. (Or type SAVE or EXIT.)' if input.length > 1
@@ -108,7 +109,7 @@ module Hangman
 
       def valid_save_name(max_length)
         name = gets.chomp
-        reg = Regexp.new("^\\w{1,#{max_length}}|go back$", true)
+        reg = Regexp.new("^\\w{1,#{max_length}}$|^go back$", true)
         until reg =~ name
           puts 'Please enter at least one character.' if name.empty?
           puts "Please enter a string of at most #{max_length} characters." if name.length > max_length
@@ -167,7 +168,7 @@ module Hangman
           return name unless name_record_reg(name) =~ File.read(save_record)
 
           puts 'You already have a saved game with this name. Do you want to overwrite your previous save? Y/N'
-          return name if /^yes|y$/i =~ gets.chomp
+          return name if /^yes$|^y$/i =~ gets.chomp
         end
       end
 
@@ -180,8 +181,8 @@ module Hangman
           return unless (name = valid_save_name(15))
 
           existing_save_game = name_record_reg(name) =~ File.read(save_record)
-          return name if existing_save_game && /^yes|y$/i =~ overwrite_name_confirm(name)
-          return if !existing_save_game && /^yes|y|go back$/i =~ overwrite_name_resume
+          return name if existing_save_game && /^yes$|^y$/i =~ overwrite_name_confirm(name)
+          return if !existing_save_game && /^yes$|^y$|^go back$/i =~ overwrite_name_resume
         end
       end
 
@@ -197,7 +198,7 @@ module Hangman
 
       def offer_game_exit
         puts 'Exit to main menu? Y/N'
-        @game_over = true if /^yes|y|exit$/i =~ gets.chomp
+        @game_over = true if /^yes$|^y$|^exit$/i =~ gets.chomp
       end
     end
 
@@ -225,7 +226,7 @@ module Hangman
           return name if name_record_reg(name) =~ File.read(save_record)
 
           puts 'There is no saved game with that name. Exit to main menu? Y/N'
-          return if /^yes|y|go back$/i =~ gets.chomp
+          return if /^yes$|^y$|^go back$/i =~ gets.chomp
         end
       end
     end
