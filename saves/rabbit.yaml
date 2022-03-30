@@ -1,4 +1,5 @@
 ---
-:word: hotel
-:correct_guessed: []
+:word: tobago
+:correct_guessed:
+- a
 :incorrect_guessed: []
