@@ -1,7 +1,6 @@
 require 'yaml'
 
 module Hangman
-  # TODO: Add extra newlines to improve presentation
   @min_length = 5
   @max_length = 12
   @words = File.readlines("#{File.dirname(__FILE__)}/google-10000-english-no-swears.txt")
@@ -19,18 +18,19 @@ module Hangman
         puts 'Okay, bye!'
         break
       end
-      self::Game.new(option.downcase == 'new').play
+      delete_games if option.downcase == 'delete'
+      self::Game.new(option.downcase == 'new').play if /^new$|^load$/ =~ option
     end
   end
 
   def self.select_program_option
-    options = ['NEW (Start a new game)', 'LOAD (Load a game)', 'EXIT (Exit the program)']
-    puts "\r\nMAIN MENU: What would you like to do? Type one of the following commands."
-    puts "\r\n#{options.map { |opt| "  -#{opt}" }.join("\r\n")}"
+    options = ['NEW (Start a new game)', 'LOAD (Load a game)', 'DELETE (Delete saved games)', 'EXIT (Exit the program)']
+    formatted_options = "\r\n#{options.map { |opt| "  -#{opt}" }.join("\r\n")}"
+    puts "\r\nMAIN MENU: What would you like to do? Type one of the following commands.\r\n#{formatted_options}"
     option = gets.chomp
-    until /^new$|^load$|^exit$/i =~ option
-      puts 'Please type NEW, LOAD, or EXIT.'
-      puts options
+    until /^new$|^load$|^delete$|^exit$/i =~ option
+      puts 'Please type NEW, LOAD, DELETE, or EXIT.'
+      puts formatted_options
       option = gets.chomp
     end
     option
@@ -97,7 +97,6 @@ module Hangman
   end
 
   module SaveLoadSystem
-    # TODO: Add a 'DELETE (Delete saved games)' option to main menu
     module Shared
       def save_dir
         "#{File.dirname(__FILE__)}/saves"
@@ -121,6 +120,18 @@ module Hangman
         name
       end
 
+      def existing_save_name(action)
+        loop do
+          puts 'Type "GO BACK" if you wish to exit to main menu.'
+          puts "Please type the name of the game you wish to #{action}."
+          return unless (name = valid_save_name(15))
+          return name if name_record_reg(name) =~ File.read(save_record)
+
+          puts 'There is no saved game with that name. Exit to main menu? Y/N'
+          return if /^yes$|^y$|^go back$/i =~ gets.chomp
+        end
+      end
+
       def name_record_reg(name)
         Regexp.new("^#{name} (.*)$", true)
       end
@@ -141,6 +152,11 @@ module Hangman
           puts "  -#{save}"
         end
         puts "\r\n"
+      end
+
+      def exit_to_main_menu
+        puts 'Press the RETURN key to exit to main menu.'
+        gets
       end
     end
 
@@ -205,39 +221,38 @@ module Hangman
     module Load
       def load_game
         if !Dir.exist?(save_dir) || Dir.empty?(save_dir)
-          puts 'Sorry, you have no saved games. Press RETURN to exit to main menu.'
-          gets
+          puts 'Sorry, you have no saved games.'
           return @game_over = true
         end
 
         display_saved_games
-        name = load_name
-        return @game_over = true unless name
+        return @game_over = true unless (name = existing_save_name('load'))
 
         from_yaml(save_dir + "/#{name}.yaml")
         puts "Game \"#{name}\" successfully loaded!"
       end
-
-      def load_name
-        loop do
-          puts 'Type "GO BACK" if you wish to exit to main menu.'
-          puts 'Please type the name of the game you wish to load.'
-          return unless (name = valid_save_name(15))
-          return name if name_record_reg(name) =~ File.read(save_record)
-
-          puts 'There is no saved game with that name. Exit to main menu? Y/N'
-          return if /^yes$|^y$|^go back$/i =~ gets.chomp
-        end
-      end
     end
 
     module Delete
+      def delete_games
+        loop do
+          display_saved_games
+          return exit_to_main_menu unless (name = existing_save_name('delete'))
+
+          delete_game(name)
+          puts "Game \"#{name}\" successfully deleted. Delete another game? Y/N"
+          return exit_to_main_menu unless /^yes$|^y$|^go back$/ =~ gets.chomp
+        end
+      end
+
       def delete_game(name)
         update_save_record(name, false)
         File.delete(save_dir + "/#{name}.yaml")
       end
     end
   end
+  extend SaveLoadSystem::Delete
+  extend SaveLoadSystem::Shared
 
   class Game
     include Hangman::Visual
@@ -245,7 +260,6 @@ module Hangman
     include Hangman::SaveLoadSystem::Shared
     include Hangman::SaveLoadSystem::Save
     include Hangman::SaveLoadSystem::Load
-    include Hangman::SaveLoadSystem::Delete
 
     def initialize(new_game)
       new_game ? start_new_game : load_game
@@ -280,6 +294,7 @@ module Hangman
         next_move
         check_game_over
       end
+      exit_to_main_menu
     end
 
     def display_game_status
@@ -324,8 +339,6 @@ module Hangman
 
       display_game_status
       puts "#{won ? 'Congratulations, you won!' : 'Sorry, you ran out of guesses.'} The word was \"#{@word}\"."
-      puts 'Press the RETURN key to exit to main menu.'
-      gets
       @game_over = true
     end
   end
