@@ -84,7 +84,7 @@ module Hangman
         return input if /^save$|^exit$/i =~ input ||
                         /^[A-Za-z]$/i =~ input && !guessed(input)
 
-        puts 'Please type one (1) single letter to guess the letter. (Or type SAVE or EXIT.)' if input.length > 1
+        puts 'Please type one (1) single letter to guess the letter. (Or type SAVE or EXIT.)'
         if /^[A-Za-z]$/i =~ input && guessed(input)
           puts "You have already guessed #{input.upcase}. Please guess a different letter."
         end
