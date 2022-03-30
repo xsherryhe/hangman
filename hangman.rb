@@ -106,6 +106,13 @@ module Hangman
         "#{File.dirname(__FILE__)}/save_record.txt"
       end
 
+      def no_saved_games
+        return if Dir.exist?(save_dir) && !Dir.empty?(save_dir)
+
+        puts 'Sorry, you have no saved games.'
+        true
+      end
+
       def valid_save_name(max_length)
         name = gets.chomp
         reg = Regexp.new("^\\w{1,#{max_length}}$|^go back$", true)
@@ -220,10 +227,7 @@ module Hangman
 
     module Load
       def load_game
-        if !Dir.exist?(save_dir) || Dir.empty?(save_dir)
-          puts 'Sorry, you have no saved games.'
-          return @game_over = true
-        end
+        return @game_over = true if no_saved_games
 
         display_saved_games
         return @game_over = true unless (name = existing_save_name('load'))
@@ -235,6 +239,8 @@ module Hangman
 
     module Delete
       def delete_games
+        return exit_to_main_menu if no_saved_games
+
         loop do
           display_saved_games
           return exit_to_main_menu unless (name = existing_save_name('delete'))
