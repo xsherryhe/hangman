@@ -8,6 +8,6 @@ The project primarily demonstrates principles and syntax of serialization and fi
 
 ## Preview
 
-![Hangman preview](./hangman.png)
+[![Hangman preview](./hangman.png)](https://replit.com/@xsherryhe/hangman)
 
 Run this project [here](https://replit.com/@xsherryhe/hangman).
